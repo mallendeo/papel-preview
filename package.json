@@ -5,10 +5,10 @@
   "license": "MIT",
   "scripts": {
     "start": "parcel src/index.html -p 3001",
-    "build": "rimraf dist && parcel build src/index.html"
+    "parcel": "parcel build src/index.html --public-url ./",
+    "build": "rm -r dist && npm run parcel && cp -r src/static/* dist/"
   },
   "devDependencies": {
-    "parcel-bundler": "^1.8.1",
-    "rimraf": "^2.6.2"
+    "parcel-bundler": "^1.8.1"
   }
 }
