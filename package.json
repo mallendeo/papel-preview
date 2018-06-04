@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "parcel src/**/*.html -p 3001",
+    "start": "rimraf dist && parcel src/**/*.html -p 3001",
     "parcel": "parcel build src/**/*.html --public-url ./",
     "build": "rimraf dist && npm run parcel && cp -r src/static/* dist/"
   },

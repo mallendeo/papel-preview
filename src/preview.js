@@ -53,8 +53,8 @@
     })
   }
 
-  const update = (lang, opts) => {
-    switch (lang) {
+  const update = (type, opts) => {
+    switch (type) {
       case 'html':
         if (opts.forceRefresh) {
           document.body.innerHTML = state.html.code
@@ -75,30 +75,30 @@
 
   window.addEventListener('message', event => {
     const { data, origin } = event
+
     if (acceptedOrigins.indexOf(origin) < 0) return
 
     if (!data && !data.type) return
-
     if (data.type === 'papel:codeupdate') {
-      const { output, error, lang, opts = {} } = data.event
+      const { output, error, type, opts = {} } = data.event
       if (error) return
 
       document.title = opts.title || 'Papel Preview'
 
-      state[lang].code = output
-      state[lang].loaded = true
+      state[type].code = output
+      state[type].loaded = true
 
-      const langs = ['html', 'css', 'js']
-      const allLoaded = !langs.some(l => !state[l].loaded)
+      const types = ['html', 'css', 'js']
+      const allLoaded = !types.some(type => !state[type].loaded)
 
       if (!allLoaded) return
       if (!state.ready) {
-        langs.forEach(update)
+        types.forEach(update)
         state.ready = true
         return
       }
 
-      update(lang, opts)
+      update(type, opts)
     }
   }, false)
 })()
