@@ -35,9 +35,15 @@
   }
 
   const updateHtml = code => {
-    const selector = 'body *:not(#__papel-preview-script):not(#__papel-init-script)'
-    const elems = document.querySelectorAll(selector)
-    elems.forEach(el => el.parentNode.removeChild(el))
+    // Remove all DOM elements, including textNodes
+    document.body.childNodes.forEach(el => {
+      const isScript = [
+        '__papel-init-script',
+        '__papel-preview-script'
+      ].indexOf(el.id) > -1
+
+      !isScript && el.parentNode.removeChild(el)
+    })
 
     const fakeElem = document.createElement('div')
     fakeElem.innerHTML = code
