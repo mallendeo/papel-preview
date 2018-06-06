@@ -36,13 +36,13 @@
 
   const updateHtml = code => {
     // Remove all DOM elements, including textNodes
-    document.body.childNodes.forEach(el => {
+    Array.from(document.body.childNodes).forEach(node => {
       const isScript = [
         '__papel-init-script',
         '__papel-preview-script'
-      ].indexOf(el.id) > -1
+      ].indexOf(node.id) > -1
 
-      !isScript && el.parentNode.removeChild(el)
+      !isScript && node.remove(node)
     })
 
     const fakeElem = document.createElement('div')
