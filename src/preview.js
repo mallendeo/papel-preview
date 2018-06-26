@@ -23,8 +23,6 @@
     }
   }
 
-  const styleElem = document.querySelector('#__papel-preview-style')
-
   const setReady = () => {
     const { html, css, js } = state
     // TODO: title, head
@@ -32,28 +30,47 @@
     const cssReady = css.loaded && css.meta.libs
     const jsReady = js.loaded && js.meta.libs
 
-    const ready = htmlReady && cssReady && jsReady
+    const ready = !!(htmlReady && cssReady && jsReady)
 
-    // Load code once libraries are added
     if (ready) {
-      ['html', 'css', 'js'].forEach(update)
+      const cssLibs = css.meta.libs
+      const jsLibs = js.meta.libs
+
+      if (cssLibs && cssLibs.length) {
+        removeNodes(document.head.childNodes)
+
+        cssLibs.reverse().forEach(lib => {
+          const elem = document.createElement('link')
+          elem.setAttribute('rel', 'stylesheet')
+          elem.setAttribute('href', lib.url)
+
+          document.head.insertBefore(elem, document.head.firstChild)
+        })
+      }
+
+      // Add styles first (prevent FOUC)
+      update('css')
+      update('html')
+
+      if (jsLibs && jsLibs.length) {
+        removeNodes(document.body.querySelectorAll('script'))
+
+        const initScript = document.querySelector('#__papel-init-script')
+
+        jsLibs.forEach(lib => {
+          const elem = document.createElement('script')
+          elem.setAttribute('src', lib.url)
+          elem.async = false
+          elem.dataset.papelExternalLib = true
+
+          initScript.parentNode.appendChild(elem)
+        })
+      }
+
+      update('js')
     }
 
     state.ready = ready
-  }
-
-  const createScript = code => {
-    const jsEl = document.querySelector('#__papel-preview-script')
-    if (jsEl) jsEl.parentNode.removeChild(jsEl)
-
-    const script = document.createElement('script')
-    const inlineScript = document.createTextNode(code)
-    script.appendChild(inlineScript)
-    script.id = '__papel-preview-script'
-    script.dataset.papelDoNotRemove = true
-
-    document.body.appendChild(script)
-    return code
   }
 
   const removeNodes = (nodes, exclude) => {
@@ -65,44 +82,54 @@
     return Array.from(nodes).map(node => !(filter(node)) && node.remove(node))
   }
 
-  const updateHtml = code => {
-    // Remove all DOM elements, including textNodes
-    removeNodes(document.body.childNodes, node => {
-      const { dataset } = node
-      if (!dataset) return false
-      return dataset.papelDoNotRemove || dataset.papelExternalLib
-    })
-
-    const fakeElem = document.createElement('div')
-    fakeElem.innerHTML = code
-
-    Array.from(fakeElem.childNodes).reverse().forEach(node => {
-      let elem = node
-
-      if (node.nodeName === 'SCRIPT') {
-        elem = document.createElement('script')
-        elem.appendChild(document.createTextNode(node.innerHTML))
-      }
-      document.body.insertBefore(elem, document.body.firstChild)
-    })
-  }
-
-  const update = (type, opts) => {
+  const update = type => {
     switch (type) {
       case 'html':
-        if (opts.forceRefresh) {
-          document.body.innerHTML = state.html.code
-          createScript(state.js.code)
-          return
-        }
+        // Remove all DOM elements, including textNodes
+        removeNodes(document.body.childNodes, node => {
+          const { dataset } = node
+          if (!dataset) return false
+          return dataset.papelDoNotRemove || dataset.papelExternalLib
+        })
 
-        updateHtml(state.html.code)
+        const fakeElem = document.createElement('div')
+        fakeElem.innerHTML = state.html.code
+
+        Array.from(fakeElem.childNodes).reverse().forEach(node => {
+          let elem = node
+
+          if (node.nodeName === 'SCRIPT') {
+            elem = document.createElement('script')
+            elem.async = node.async || false
+            elem.appendChild(document.createTextNode(node.innerHTML))
+          }
+          document.body.insertBefore(elem, document.body.firstChild)
+        })
         break
       case 'css':
+        let styleElem = document.head.querySelector('#__papel-preview-style')
+
+        if (!styleElem) {
+          styleElem = document.createElement('style')
+          styleElem.dataset.papelDoNotRemove = true
+          styleElem.id = '__papel-preview-style'
+          document.head.appendChild(styleElem)
+        }
+
         styleElem.innerHTML = state.css.code
         break
       case 'js':
-        createScript(state.js.code)
+        let scriptElem = document.querySelector('#__papel-preview-script')
+        if (scriptElem) scriptElem.parentNode.removeChild(scriptElem)
+
+        scriptElem = document.createElement('script')
+        const inlineScript = document.createTextNode(state.js.code)
+        scriptElem.appendChild(inlineScript)
+        scriptElem.id = '__papel-preview-script'
+        scriptElem.dataset.papelDoNotRemove = true
+        scriptElem.async = false
+
+        document.body.appendChild(scriptElem)
         break
     }
   }
@@ -115,37 +142,10 @@
 
     if (data.type === 'papel:metaupdate') {
       const { libs, title, head, htmlClasses } = data.event
+      document.title = title || 'Papel Preview'
 
-      removeNodes(document.head.childNodes)
-
-      if (libs.css && libs.css.length) {
-        libs.css.reverse().forEach(lib => {
-          const elem = document.createElement('link')
-          elem.setAttribute('rel', 'stylesheet')
-          elem.setAttribute('href', lib.url)
-
-          document.head.insertBefore(elem, document.head.firstChild)
-        })
-
-        state.css.meta.libs = libs.css
-      }
-
-      if (libs.js && libs.js.length) {
-        removeNodes(document.body.querySelectorAll('script'))
-
-        const initScript = document.querySelector('#__papel-init-script')
-
-        libs.js.forEach(lib => {
-          console.log('inserting', lib)
-          const elem = document.createElement('script')
-          elem.setAttribute('src', lib.url)
-          elem.dataset.papelExternalLib = true
-
-          initScript.parentNode.appendChild(elem)
-        })
-
-        state.js.meta.libs = libs.js
-      }
+      state.css.meta.libs = libs.css
+      state.js.meta.libs = libs.js
 
       setReady()
     }
@@ -154,21 +154,12 @@
       const { output, error, type, opts = {} } = data.event
       if (error) return
 
-      document.title = opts.title || 'Papel Preview'
-
       state[type].code = output
       state[type].loaded = true
 
-      const types = ['html', 'css', 'js']
-      const allLoaded = !types.some(type => !state[type].loaded)
+      if (!state.ready) return setReady()
 
-      if (!allLoaded) return
-      if (!state.ready) {
-        setReady()
-        return
-      }
-
-      update(type, opts)
+      update(type)
     }
   }, false)
 })()
