@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "rimraf dist && parcel src/**/*.html -p 3001",
     "parcel": "parcel build src/**/*.html --public-url ./",
-    "build": "rimraf dist && npm run parcel && cp -r src/static/* dist/"
+    "sw": "workbox injectManifest workbox-config.js",
+    "build": "rimraf dist && npm run parcel && cp -r src/static/* dist/ && npm run sw"
   },
   "devDependencies": {
     "parcel-bundler": "^1.8.1",
-    "rimraf": "^2.6.2"
+    "rimraf": "^2.6.2",
+    "workbox-cli": "^3.3.1"
   }
 }

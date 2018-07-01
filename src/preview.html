@@ -1,1 +1,23 @@
-<script src="./preview.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+}
+
+const load = event => {
+  const { data } = event
+
+  if (!data && !data.type) return
+
+  if (data.type === 'papel:fullhtml') {
+    window.removeEventListener('message', load, false)
+
+    // rewrite DOM
+    document.open()
+    document.write(data.html)
+    document.close()
+  }
+}
+
+window.addEventListener('message', load, false)
+window.parent.postMessage('papel:gethtml', '*')
+</script>
